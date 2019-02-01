@@ -15,8 +15,8 @@ var app = express();
 var router = express.Router();    
 var path = require('path');
 var bodyParser = require('body-parser');
-
-app.use('/demo', express.static(path.join(__dirname, '..', '..', '..', 'static')));
+// app.use('/demo', express.static(path.join(__dirname + 'static')));
+app.use('/demo', express.static('static'));
 app.use(bodyParser.json());
 app.set('json spaces', 2);
 
@@ -87,8 +87,6 @@ router.route('/quotes/:index')
     if(!request.body.hasOwnProperty('content')) {
       return reply.status(400).send('Error 400: PUT syntax incorrect.');
     }
-
-
     // Create the object from the POST body
     var quoteBody = {
       "content":request.body.content,
@@ -103,7 +101,12 @@ router.route('/quotes/:index')
     })
     
   })
-
+  .delete(function(request, reply) {
+    var index = parseInt(request.params.index)
+    quotes.findOneAndDelete({index:parseInt(request.params.index)}, function(err, res) {
+      reply.status(204).send();
+    })
+  })
 
 // ********************************************
 // SERVERS ************************************
