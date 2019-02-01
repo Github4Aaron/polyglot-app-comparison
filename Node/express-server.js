@@ -16,7 +16,7 @@ var router = express.Router();
 var path = require('path');
 var bodyParser = require('body-parser');
 
-app.use('/demo', express.static(path.join(__dirname, '..', '..', '..','static')));
+app.use('/demo', express.static(path.join(__dirname, '..', '..', '..', 'static')));
 app.use(bodyParser.json());
 app.set('json spaces', 2);
 
@@ -33,14 +33,35 @@ app.get('/', function(request, reply) {
 // REST API ROUTES ***************************
 // *******************************************
 
-app.use('/api', router); // all routes will be found at /api/quotes
+app.use('/api', router);
 
 // QUOTE LIST
-router.route('/quotes')  // app processes request based on combo of endoint & method(s) -> dot.notation
+router.route('/quotes')
   .get(function(request, reply)  {
       quotes.find().sort({index:-1}).limit(10).toArray((err, results) => {
 	      reply.send(results)
       })
+  })
+  .post(function(request, reply) {
+    if(!request.body.hasOwnProperty('content')) {
+      return reply.status(400).send('Error 400: POST syntax incorrect.');
+    }
+    topquote += 1;
+
+    // Create the object from the POST body
+    var quoteBody = {
+      "content":request.body.content,
+      "index":topquote
+    } 
+
+    if (request.body.hasOwnProperty('author')) {
+      quoteBody["author"] = request.body.author
+    }
+
+    // Save the new quote
+    quotes.save(quoteBody, function(err, result) {
+      return reply.status(201).send({"index":topquote});
+    })
   })
 
 // RANDOM QUOTE FROM THE DATABASE
@@ -55,11 +76,34 @@ router.route('/quotes/random')
 // SINGLE QUOTE
 router.route('/quotes/:index')
   .get(function(request, reply) {
-    index = parseInt(request.params.index) // pulls index from the path / parseInt takes from string to int
+    index = parseInt(request.params.index)
     quotes.findOne({"index":index}, (err, results) => {
        reply.send(results)
     })
   })
+  .put(function(request, reply) {
+    index = parseInt(request.params.index);  // taking idex from path to build a query object
+    query = {"index": index};
+    if(!request.body.hasOwnProperty('content')) {
+      return reply.status(400).send('Error 400: PUT syntax incorrect.');
+    }
+
+
+    // Create the object from the POST body
+    var quoteBody = {
+      "content":request.body.content,
+      "index":index
+    } 
+
+    if (request.body.hasOwnProperty('author')) {
+      quoteBody["author"] = request.body.author
+    } 
+    quotes.findOneAndUpdate(query, quoteBody, {upsert:true}, function (err, results) {
+      return reply.status(201).send({"index":index});
+    })
+    
+  })
+
 
 // ********************************************
 // SERVERS ************************************
