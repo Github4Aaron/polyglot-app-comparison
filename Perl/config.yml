@@ -1,0 +1,13 @@
+    plugins:
+        MongoDB:
+            host: "localhost"
+            port: 27017
+    serializer: "JSON"
+    charset: "UTF-8"
+    show_errors: 1 
+    engines:
+        JSON:
+            allow_blessed: '1'
+            convert_blessed: '1'
+    content_type: "application/json"
+    port: 8080
