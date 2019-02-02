@@ -15,8 +15,7 @@ var app = express();
 var router = express.Router();    
 var path = require('path');
 var bodyParser = require('body-parser');
-// app.use('/demo', express.static(path.join(__dirname + 'static')));
-app.use('/demo', express.static('static'));
+app.use('/demo', express.static(path.join(__dirname + 'static')));
 app.use(bodyParser.json());
 app.set('json spaces', 2);
 
