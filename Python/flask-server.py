@@ -27,6 +27,25 @@ class QuoteList(Resource):
 
     def post(self):
         args = parser.parse_args()
+        quotes = mongo.db.quotes.find().sort("index", -1).limit(1)
+        args["index"] = int(quotes[0]["index"]) + 1
+        try:
+            mongo.db.quotes.insert(args)
+        except Error as ve:
+            abort(400, str(ve))
+        resp_obj = {'index': args["index"]}
+        return resp_obj, 201
+
+
+class QuoteList(Resource):
+    def get(self):
+        quotes = mongo.db.quotes.find().sort("index", -1).limit(10)
+        resp = Response(dumps(quotes, default=default, indent=2),
+                        mimetype='application/json')
+        return resp
+
+    def post(self):
+        args = parser.parse_args()
         if not (args['content'] and args['author']):
             return 'Missing data', 400
 
@@ -75,6 +94,17 @@ class Quote(Resource):
             abort(400, str(ve))
         resp_obj = {'index': int(quote_id)}
         return resp_obj, 201
+
+    def delete(self, quote_id):
+        try:
+            mongo.db.quotes.remove({
+                'index': int(quote_id)
+            })
+        except Exception as ve:
+            print (ve)
+            abort(400, str(ve))
+        return '', 204
+
 
 @app.route('/')
 def hello_world():
