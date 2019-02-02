@@ -2,14 +2,14 @@ from flask import Flask, jsonify, Response, send_from_directory
 
 from flask_restful import reqparse, abort, Api, Resource
 from flask_pymongo import PyMongo
-from bson.json_util import dumps, default # Formatting mongodb responses -Binary JSON
-import os #portable way of using operating system dependent functionality
-from random import randint #random number generator
+from bson.json_util import dumps, default
+import os
+from random import randint
 
-app = Flask("test")  # Flask object
+app = Flask("test")
 api = Api(app)
 app.config["MONGO_URI"] = "mongodb://localhost:27017/test"
-mongo = PyMongo(app) # to access db
+mongo = PyMongo(app)
 
 # We'll use parser in put and post requests, so set it up here
 # outside of the classes
@@ -17,7 +17,6 @@ parser = reqparse.RequestParser()
 parser.add_argument('author')
 parser.add_argument('content')
 
-##  Because Python is OO, structure is around creating classes and accessing them.
 
 class QuoteList(Resource):
     def get(self):
@@ -25,6 +24,22 @@ class QuoteList(Resource):
         resp = Response(dumps(quotes, default=default, indent=2),
                         mimetype='application/json')
         return resp
+
+    def post(self):
+        args = parser.parse_args()
+        if not (args['content'] and args['author']):
+            return 'Missing data', 400
+
+        quotes = mongo.db.quotes.find().sort("index", -1).limit(1)
+        args["index"] = int(quotes[0]["index"]) + 1
+
+        try:
+            mongo.db.quotes.insert(args)
+        except Error as ve:
+            abort(400, str(ve))
+        resp_obj = {'index': args["index"]}
+        return resp_obj, 201
+
 
 class Quote(Resource):
     def get(self, quote_id):
@@ -38,6 +53,29 @@ class Quote(Resource):
                         mimetype='application/json')
         return resp
 
+    def put(self, quote_id):
+        args = parser.parse_args()
+        if not (args['content'] or args['author']):
+            return 'Missing data', 400
+
+        existing_quote = mongo.db.quotes.find_one({"index": int(quote_id)})
+        args["content"] = args["content"] if args["content"] else existing_quote["content"]
+        args["author"] = args["author"] if args["author"] else existing_quote["author"]
+
+        try:
+            mongo.db.quotes.update({
+                "index": int(quote_id)
+            }, {
+                '$set': {
+                    "content": args["content"],
+                    "author": args["author"]
+                }
+            }, upsert=True)
+        except Exception as ve:
+            abort(400, str(ve))
+        resp_obj = {'index': int(quote_id)}
+        return resp_obj, 201
+
 @app.route('/')
 def hello_world():
     return 'Hello from Flask!'
@@ -46,7 +84,7 @@ def hello_world():
 @app.route('/demo/')
 def serve_page():
     APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-    STATIC_ROOT = os.path.join(APP_ROOT, "..", "..", "..", "static")
+    STATIC_ROOT = os.path.join(APP_ROOT, "static")
     return send_from_directory(STATIC_ROOT, "index.html")
 
 
