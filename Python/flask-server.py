@@ -8,6 +8,7 @@ from random import randint #random number generator
 
 app = Flask("test")  # Flask object
 api = Api(app)
+app.config["MONGO_URI"] = "mongodb://localhost:27017/test"
 mongo = PyMongo(app) # to access db
 
 # We'll use parser in put and post requests, so set it up here
