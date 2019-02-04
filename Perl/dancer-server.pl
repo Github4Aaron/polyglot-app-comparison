@@ -15,22 +15,25 @@ get '/api/quotes' => sub {
                          }
                 );
         } 
+        if (! scalar (@results)) {
+            status 404;
+            return;
+        }
         return \@results;
 };
 
 post '/api/quotes' => sub {
-        # Find the quote with the highest index and then add 1.
     my $query = $quotes->find()->sort({'index' => -1})->limit(1);
     my $topquote = $query->next;
     my $max_id = $topquote->{'index'} + 1;
     
     # get the author and content from the parameters
-    if (!params->{content}) { #check for content
+    if (!params->{content}) {
         status 400;
         return {message => "Content is required for new quotes."};
     }
 
-    my %response = ( # sends a reference to a hash in the database for processing
+    my %response = (
         'author' => params->{author},
         'content' => params->{content},
         'index' => $max_id
@@ -49,6 +52,7 @@ get '/api/quotes/random' => sub {
     my $response = $quotes->find_one({"index" => $random});
     return $response;
 };
+
 
 get '/api/quotes/:index' => sub {
     my $response = $quotes->find_one({"index" => int(params->{'index'})}); 
@@ -78,6 +82,27 @@ put '/api/quotes/:index' => sub {
     return {"index"=>$index};
 };
 
+#del '/api/quotes/:index' => sub {
+#    my $response = $quotes->find_one({"index" => int(params->{'index'})}); 
+#    if (!$response) {
+#        status 404;
+#        return;
+#    }
+#    $quotes->delete_one({index => int(params->{'index'})});
+#    status 204;
+#    return;
+#};
+
+
+del '/api/quotes/:index' => sub {
+    my $response = $quotes->delete_one({index => int(params->{'index'})});
+    if ($response->deleted_count == 0) {
+        status 404;
+        return;
+    }
+    status 204;
+    return;
+};
 
 get '/' => sub{
     return {message => "Hello from Perl and Dancer"};
