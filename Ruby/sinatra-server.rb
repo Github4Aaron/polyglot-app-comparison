@@ -21,20 +21,69 @@ before do
 end
 
   namespace "/api" do
-    # list all
+     # list all
     get '/quotes' do
       Quote.all.desc(:index).limit(10).to_json
     end
 
+     # create
+    post '/quotes' do
+      top = Quote.all.desc(:index).limit(1)
+      newnumber = top[0][:index] + 1
+      json = JSON.parse(request.body.read)
+      if not json['content'] then
+        return [400, "New quotes must include content"]
+      end
+      quote = Quote.new(
+                        content: json['content'], 
+                        author: json['author'], 
+                        index: newnumber)
+      quote.save
+      return_obj = {"index" => newnumber}
+      return [201, return_obj.to_json]
+    end
+
+    get '/quotes/random' do
+      top = Quote.all.desc(:index).limit(1)
+      random_num = rand(top[0][:index]).to_i
+      quote = Quote.find_by(index: random_num)
+      return status 404 if quote.nil?
+      quote.to_json
+    end
+
     # view one
     get '/quotes/:index' do
-      Quote.find_by(index: params[:index].to_i).to_json
+      quote = Quote.find_by(index: params[:index].to_i).to_json
+    end
+
+      # update
+    put '/quotes/:index' do
+      json = JSON.parse(request.body.read)
+      quote = Quote.find_by(index: params[:index].to_i)
+
+      if json['content'] then
+        quote.update(content: json['content'])
+      end
+
+      if json['author'] then
+        quote.update(author: json['author'])
+      end
+
+      return_obj = {"index" => params[:index].to_i}
+      return [201, return_obj.to_json]
+    end
+
+    delete '/quotes/:index' do
+      quote = Quote.find_by(index: params[:index].to_i)
+      return status 404 if quote.nil?
+      quote.delete
+      status 204
     end
   end
 
 get '/demo*' do
   content_type :html
-  File.read(File.join('../../../static', 'index.html'))
+  File.read(File.join('../../static', 'index.html'))
 end
 
 get '/' do
